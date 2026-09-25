@@ -50,6 +50,33 @@ router.post('/', authRequired, async (req, res) => {
   res.status(201).json({ message: 'Budget saved' });
 });
 
+// ==========================================
+// NEW: PUT /api/budgets/:id -> Edit a budget
+// ==========================================
+router.put('/:id', authRequired, async (req, res) => {
+  const { category_id, month, limit_amount } = req.body;
+  if (!category_id || !month || !limit_amount) {
+    return res.status(400).json({ error: 'category_id, month and limit_amount are required' });
+  }
+
+  // 1. Verify the budget belongs to the logged-in user
+  const [rows] = await pool.query(
+    'SELECT * FROM budgets WHERE budget_id = ? AND user_id = ?',
+    [req.params.id, req.user.user_id]
+  );
+  if (!rows.length) {
+    return res.status(404).json({ error: 'Budget not found or unauthorized' });
+  }
+
+  // 2. Update the budget in the database
+  await pool.query(
+    'UPDATE budgets SET category_id = ?, month = ?, limit_amount = ? WHERE budget_id = ?',
+    [category_id, month, limit_amount, req.params.id]
+  );
+
+  res.json({ message: 'Budget updated successfully' });
+});
+
 // DELETE /api/budgets/:id
 router.delete('/:id', authRequired, async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM budgets WHERE budget_id = ? AND user_id = ?', [req.params.id, req.user.user_id]);
